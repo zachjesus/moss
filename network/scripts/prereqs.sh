@@ -6,6 +6,8 @@
 #
 
 # Double check that kind, kubectl, docker, and all required images are present.
+
+
 function check_prereqs() {
 
   set +e

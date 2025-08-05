@@ -1,5 +1,5 @@
 #!/bin/bash
-export TEST_NETWORK_FABRIC_VERSION=3.1
+export TEST_NETWORK_FABRIC_VERSION=3.1.1 
 export TEST_NETWORK_ORDERER_TYPE=bft
 
 ./network kind
