@@ -13,4 +13,4 @@ export TEST_NETWORK_ORDERER_TYPE=bft
 
 ./network chaincode invoke asset-transfer-basic '{"Args":["InitLedger"]}'
 
-#./network chaincode query  asset-transfer-basic '{"Args":["ReadAsset","asset1"]}'
+#./network chaincode query  asset-transfer-basic '{"Args":["ReadAsset","book001"]}'

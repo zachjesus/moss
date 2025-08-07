@@ -1,165 +1,294 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  */
-// Deterministic JSON.stringify()
+
 import {Context, Contract, Info, Returns, Transaction} from 'fabric-contract-api';
 import stringify from 'json-stringify-deterministic';
 import sortKeysRecursive from 'sort-keys-recursive';
-import {Asset} from './asset';
+import {Book} from './asset';
 
-@Info({title: 'AssetTransfer', description: 'Smart contract for trading assets'})
+@Info({title: 'AssetTransfer', description: 'Smart contract for trading Dublin Core assets'})
 export class AssetTransferContract extends Contract {
 
     @Transaction()
     public async InitLedger(ctx: Context): Promise<void> {
-        const assets: Asset[] = [
+        const assets: Book[] = [
             {
-                ID: 'asset1',
-                Color: 'blue',
-                Size: 5,
-                Owner: 'Tomoko',
-                AppraisedValue: 300,
+                docType: 'Book',
+                identifier: 'book001',
+                title: 'Dune',
+                creator: 'Frank Herbert',
+                subject: 'Science Fiction; Politics; Ecology; Religion',
+                description: 'A science fiction epic set on the desert planet Arrakis.',
+                publisher: 'Chilton Books',
+                contributor: 'John Schoenherr (cover art)',
+                date: '1965-08-01',
+                type: 'Text; Novel',
+                format: 'Print; Hardcover',
+                source: 'Analog Science Fiction magazine (serialized)',
+                language: 'en',
+                relation: 'Original Dune',
+                coverage: 'Far future; Desert planet',
+                rights: 'Copyright Frank Herbert Estate',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
             {
-                ID: 'asset2',
-                Color: 'red',
-                Size: 5,
-                Owner: 'Brad',
-                AppraisedValue: 400,
+                docType: 'Book',
+                identifier: 'book002',
+                title: 'Neuromancer',
+                creator: 'William Gibson',
+                subject: 'Cyberpunk; Artificial Intelligence; Virtual Reality; Dystopia',
+                description: 'A groundbreaking cyberpunk novel about a washed-up computer hacker hired for one last job in cyberspace.',
+                publisher: 'Ace Books',
+                contributor: 'James Warhola (cover art)',
+                date: '1984-07-01',
+                type: 'Text; Novel',
+                format: 'Print; Paperback',
+                source: 'Original work',
+                language: 'en',
+                relation: 'First novel in Sprawl trilogy',
+                coverage: '2030s; Chiba City; Cyberspace',
+                rights: 'Copyright William Gibson',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
             {
-                ID: 'asset3',
-                Color: 'green',
-                Size: 10,
-                Owner: 'Jin Soo',
-                AppraisedValue: 500,
+                docType: 'Book',
+                identifier: 'book003',
+                title: 'The Foundation',
+                creator: 'Isaac Asimov',
+                subject: 'Science Fiction; Psychohistory; Galactic Empire',
+                description: 'The first novel in the Foundation series about the fall of a galactic empire and the science of psychohistory.',
+                publisher: 'Gnome Press',
+                contributor: 'Edd Cartier (illustrations)',
+                date: '1951-05-01',
+                type: 'Text; Novel',
+                format: 'Print; Hardcover',
+                source: 'Astounding Science Fiction magazine',
+                language: 'en',
+                relation: 'First in Foundation series',
+                coverage: 'Far future; Galactic Empire',
+                rights: 'Copyright Isaac Asimov Estate',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
             {
-                ID: 'asset4',
-                Color: 'yellow',
-                Size: 10,
-                Owner: 'Max',
-                AppraisedValue: 600,
+                docType: 'Book',
+                identifier: 'book004',
+                title: 'Hyperion',
+                creator: 'Dan Simmons',
+                subject: 'Science Fiction; Space Opera; Time Travel; AI',
+                description: 'A Canterbury Tales-style narrative about pilgrims journeying to the mysterious world of Hyperion.',
+                publisher: 'Doubleday',
+                contributor: 'Gary Ruddell (cover art)',
+                date: '1989-05-26',
+                type: 'Text; Novel',
+                format: 'Print; Hardcover',
+                source: 'Original work',
+                language: 'en',
+                relation: 'First in Hyperion Cantos series',
+                coverage: '28th century; Planet Hyperion',
+                rights: 'Copyright Dan Simmons',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
             {
-                ID: 'asset5',
-                Color: 'black',
-                Size: 15,
-                Owner: 'Adriana',
-                AppraisedValue: 700,
+                docType: 'Book',
+                identifier: 'book005',
+                title: 'The Left Hand of Darkness',
+                creator: 'Ursula K. Le Guin',
+                subject: 'Science Fiction; Gender; Politics; Anthropology',
+                description: 'A groundbreaking exploration of gender and society on a planet where inhabitants can change sex.',
+                publisher: 'Ace Books',
+                contributor: 'Leo and Diane Dillon (cover art)',
+                date: '1969-03-01',
+                type: 'Text; Novel',
+                format: 'Print; Paperback',
+                source: 'Original work',
+                language: 'en',
+                relation: 'Part of Hainish Cycle',
+                coverage: 'Planet Gethen (Winter)',
+                rights: 'Copyright Ursula K. Le Guin Estate',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
             {
-                ID: 'asset6',
-                Color: 'white',
-                Size: 15,
-                Owner: 'Michel',
-                AppraisedValue: 800,
+                docType: 'Book',
+                identifier: 'book006',
+                title: 'Ender\'s Game',
+                creator: 'Orson Scott Card',
+                subject: 'Science Fiction; Military; Children; Strategy',
+                description: 'A young boy is recruited to attend Battle School and trained to fight against an alien invasion.',
+                publisher: 'Tor Books',
+                contributor: 'John Harris (cover art)',
+                date: '1985-01-15',
+                type: 'Text; Novel',
+                format: 'Print; Hardcover',
+                source: 'Analog Science Fiction magazine (short story)',
+                language: 'en',
+                relation: 'First in Ender Quintet series',
+                coverage: 'Near future; Space; Battle School',
+                rights: 'Copyright Orson Scott Card',
+                owner: 'University Library 1',
+                lendee: 'none',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'open',
             },
         ];
 
         for (const asset of assets) {
-            asset.docType = 'asset';
-            // example of how to write to world state deterministically
-            // use convetion of alphabetic order
-            // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-            // when retrieving data, in any lang, the order of data will be the same and consequently also the corresonding hash
-            await ctx.stub.putState(asset.ID, Buffer.from(stringify(sortKeysRecursive(asset))));
-            console.info(`Asset ${asset.ID} initialized`);
+            await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
+            console.info(`Asset ${asset.identifier} initialized`);
         }
     }
 
-    // CreateAsset issues a new asset to the world state with given details.
     @Transaction()
-    public async CreateAsset(ctx: Context, id: string, color: string, size: number, owner: string, appraisedValue: number): Promise<void> {
-        const exists = await this.AssetExists(ctx, id);
+    public async CreateAsset(ctx: Context, identifier: string, title: string, creator: string, subject: string, description: string, publisher: string, date: string, owner: string): Promise<void> {
+        const exists = await this.AssetExists(ctx, identifier);
         if (exists) {
-            throw new Error(`The asset ${id} already exists`);
+            throw new Error(`The asset ${identifier} already exists`);
         }
 
-        const asset = {
-            ID: id,
-            Color: color,
-            Size: size,
-            Owner: owner,
-            AppraisedValue: appraisedValue,
+        const asset: Book = {
+            docType: 'Book',
+            identifier,
+            title,
+            creator,
+            contributor: '',
+            publisher,
+            subject,
+            description,
+            type: 'Text',
+            date,
+            coverage: '',
+            format: 'Print',
+            source: '',
+            language: 'en',
+            relation: '',
+            rights: '',
+            owner,
+            lendee: 'none',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            status: 'open',
         };
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+        
+        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
-    // ReadAsset returns the asset stored in the world state with given id.
     @Transaction(false)
-    public async ReadAsset(ctx: Context, id: string): Promise<string> {
-        const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
+    public async ReadAsset(ctx: Context, identifier: string): Promise<string> {
+        const assetJSON = await ctx.stub.getState(identifier);
         if (assetJSON.length === 0) {
-            throw new Error(`The asset ${id} does not exist`);
+            throw new Error(`The asset ${identifier} does not exist`);
         }
         return assetJSON.toString();
     }
 
-    // UpdateAsset updates an existing asset in the world state with provided parameters.
     @Transaction()
-    public async UpdateAsset(ctx: Context, id: string, color: string, size: number, owner: string, appraisedValue: number): Promise<void> {
-        const exists = await this.AssetExists(ctx, id);
+    public async UpdateAsset(ctx: Context, identifier: string, title: string, creator: string, subject: string, description: string, publisher: string, date: string, owner: string): Promise<void> {
+        const exists = await this.AssetExists(ctx, identifier);
         if (!exists) {
-            throw new Error(`The asset ${id} does not exist`);
+            throw new Error(`The asset ${identifier} does not exist`);
         }
 
-        // overwriting original asset with new asset
-        const updatedAsset = {
-            ID: id,
-            Color: color,
-            Size: size,
-            Owner: owner,
-            AppraisedValue: appraisedValue,
-        };
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
+        const assetString = await this.ReadAsset(ctx, identifier);
+        const asset = JSON.parse(assetString) as Book;
+        
+        asset.title = title;
+        asset.creator = creator;
+        asset.subject = subject;
+        asset.description = description;
+        asset.publisher = publisher;
+        asset.date = date;
+        asset.owner = owner;
+        asset.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
-    // DeleteAsset deletes an given asset from the world state.
     @Transaction()
-    public async DeleteAsset(ctx: Context, id: string): Promise<void> {
-        const exists = await this.AssetExists(ctx, id);
-        if (!exists) {
-            throw new Error(`The asset ${id} does not exist`);
+    public async LendAsset(ctx: Context, identifier: string, lendee: string): Promise<void> {
+        const assetString = await this.ReadAsset(ctx, identifier);
+        const asset = JSON.parse(assetString) as Book;
+        
+        if (asset.status !== 'open') {
+            throw new Error(`Asset ${identifier} is not available for lending`);
         }
-        return ctx.stub.deleteState(id);
+        
+        asset.lendee = lendee;
+        asset.status = 'loaned';
+        asset.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
-    // AssetExists returns true when asset with given ID exists in world state.
+    @Transaction()
+    public async ReturnAsset(ctx: Context, identifier: string): Promise<void> {
+        const assetString = await this.ReadAsset(ctx, identifier);
+        const asset = JSON.parse(assetString) as Book;
+        
+        asset.lendee = 'none';
+        asset.status = 'open';
+        asset.updatedAt = new Date().toISOString();
+        
+        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
+    }
+
+    @Transaction()
+    public async DeleteAsset(ctx: Context, identifier: string): Promise<void> {
+        const exists = await this.AssetExists(ctx, identifier);
+        if (!exists) {
+            throw new Error(`The asset ${identifier} does not exist`);
+        }
+        return ctx.stub.deleteState(identifier);
+    }
+
     @Transaction(false)
     @Returns('boolean')
-    public async AssetExists(ctx: Context, id: string): Promise<boolean> {
-        const assetJSON = await ctx.stub.getState(id);
+    public async AssetExists(ctx: Context, identifier: string): Promise<boolean> {
+        const assetJSON = await ctx.stub.getState(identifier);
         return assetJSON.length > 0;
     }
 
-    // TransferAsset updates the owner field of asset with given id in the world state, and returns the old owner.
     @Transaction()
-    public async TransferAsset(ctx: Context, id: string, newOwner: string): Promise<string> {
-        const assetString = await this.ReadAsset(ctx, id);
-        const asset = JSON.parse(assetString) as Asset;
-        const oldOwner = asset.Owner;
-        asset.Owner = newOwner;
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+    public async TransferAsset(ctx: Context, identifier: string, newOwner: string): Promise<string> {
+        const assetString = await this.ReadAsset(ctx, identifier);
+        const asset = JSON.parse(assetString) as Book;
+        const oldOwner = asset.owner;
+        asset.owner = newOwner;
+        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
         return oldOwner;
     }
 
-    // GetAllAssets returns all assets found in the world state.
     @Transaction(false)
     @Returns('string')
     public async GetAllAssets(ctx: Context): Promise<string> {
         const allResults = [];
-        // range query with empty string for startKey and endKey does an open-ended query of all assets in the chaincode namespace.
         const iterator = await ctx.stub.getStateByRange('', '');
         let result = await iterator.next();
         while (!result.done) {
             const strValue = Buffer.from(result.value.value.toString()).toString('utf8');
             let record;
             try {
-                record = JSON.parse(strValue) as Asset;
+                record = JSON.parse(strValue) as Book;
             } catch (err) {
                 console.log(err);
                 record = strValue;
@@ -169,5 +298,4 @@ export class AssetTransferContract extends Contract {
         }
         return JSON.stringify(allResults);
     }
-
 }
