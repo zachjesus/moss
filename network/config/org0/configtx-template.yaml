@@ -81,40 +81,6 @@ Organizations:
       - Host: org1-peer1.${ORG1_NS}.svc.cluster.local
         Port: 7051
 
-  - &Org2
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
-    Name: Org2MSP
-
-    # ID to load the MSP definition as
-    ID: Org2MSP
-
-    MSPDir: ./channel-msp/peerOrganizations/org2/msp
-
-    # Policies defines the set of policies at this level of the config tree
-    # For organization policies, their canonical path is usually
-    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org2MSP.admin')"
-      Endorsement:
-        Type: Signature
-        Rule: "OR('Org2MSP.peer')"
-
-    AnchorPeers:
-      # AnchorPeers defines the location of peers which can be used
-      # for cross org gossip communication.  Note, this value is only
-      # encoded in the genesis block in the Application section context
-      - Host: org2-peer1.${ORG2_NS}.svc.cluster.local
-        Port: 7051
-
 ################################################################################
 #
 #   SECTION: Capabilities
@@ -200,10 +166,10 @@ Application: &ApplicationDefaults
       Rule: "MAJORITY Admins"
     LifecycleEndorsement:
       Type: Signature
-      Rule: "OR('Org1MSP.peer','Org2MSP.peer')"
+      Rule: "OR('Org1MSP.peer')"
     Endorsement:
       Type: Signature
-      Rule: "OR('Org1MSP.peer','Org2MSP.peer')"
+      Rule: "OR('Org1MSP.peer')"
 
   Capabilities:
     <<: *ApplicationCapabilities
@@ -234,7 +200,6 @@ Orderer: &OrdererDefaults
         Port: 6050
         ClientTLSCert: ./channel-msp/ordererOrganizations/org0/orderers/org0-orderer3/tls/signcerts/tls-cert.pem
         ServerTLSCert: ./channel-msp/ordererOrganizations/org0/orderers/org0-orderer3/tls/signcerts/tls-cert.pem
-
 
     # Options to be specified for all the etcd/raft nodes. The values here
     # are the defaults for all new channels and can be modified on a
@@ -359,7 +324,6 @@ Profiles:
       <<: *ApplicationDefaults
       Organizations:
         - *Org1
-        - *Org2
       Capabilities: *ApplicationCapabilities
 
 
@@ -384,7 +348,6 @@ Profiles:
       SampleConsortium:
         Organizations:
           - *Org1
-          - *Org2
   TwoOrgsChannel:
     Consortium: SampleConsortium
     <<: *ChannelDefaults
@@ -392,7 +355,6 @@ Profiles:
       <<: *ApplicationDefaults
       Organizations:
         - *Org1
-        - *Org2
       Capabilities:
         <<: *ApplicationCapabilities
   Org1Channel:
@@ -402,14 +364,5 @@ Profiles:
       <<: *ApplicationDefaults
       Organizations:
         - *Org1
-      Capabilities:
-        <<: *ApplicationCapabilities
-  Org2Channel:
-    Consortium: SampleConsortium
-    <<: *ChannelDefaults
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-        - *Org2
       Capabilities:
         <<: *ApplicationCapabilities

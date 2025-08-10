@@ -17,16 +17,3 @@ services:
             docker_test:
         expose:
             - 9999
-
-    asset-transfer-basic.org2.example.com:
-        build: .
-        container_name: asset-transfer-basic.org2.example.com
-        hostname: asset-transfer-basic.org2.example.com
-        volumes:
-            - ./crypto:/crypto
-        env_file:
-            - chaincode2.env
-        networks:
-            docker_test:
-        expose:
-            - 9999

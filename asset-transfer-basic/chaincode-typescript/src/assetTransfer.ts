@@ -10,8 +10,19 @@ import {Book} from './asset';
 @Info({title: 'AssetTransfer', description: 'Smart contract for trading Dublin Core assets'})
 export class AssetTransferContract extends Contract {
 
+    private getLedgerTimestampISO(ctx: Context): string {
+        const ts: any = ctx.stub.getTxTimestamp() as any;
+        if (ts instanceof Date) {
+            return ts.toISOString();
+        }
+        const seconds = typeof ts?.seconds === 'number' ? ts.seconds : (ts?.seconds?.low ?? 0);
+        const nanos = ts?.nanos ?? 0;
+        return new Date(seconds * 1000 + Math.floor(nanos / 1_000_000)).toISOString();
+    }
+
     @Transaction()
     public async InitLedger(ctx: Context): Promise<void> {
+        const now = this.getLedgerTimestampISO(ctx);
         const assets: Book[] = [
             {
                 docType: 'Book',
@@ -30,125 +41,10 @@ export class AssetTransferContract extends Contract {
                 relation: 'Original Dune',
                 coverage: 'Far future; Desert planet',
                 rights: 'Copyright Frank Herbert Estate',
-                owner: 'University Library 1',
+                owner: 'Zachary Rosario',
                 lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'open',
-            },
-            {
-                docType: 'Book',
-                identifier: 'book002',
-                title: 'Neuromancer',
-                creator: 'William Gibson',
-                subject: 'Cyberpunk; Artificial Intelligence; Virtual Reality; Dystopia',
-                description: 'A groundbreaking cyberpunk novel about a washed-up computer hacker hired for one last job in cyberspace.',
-                publisher: 'Ace Books',
-                contributor: 'James Warhola (cover art)',
-                date: '1984-07-01',
-                type: 'Text; Novel',
-                format: 'Print; Paperback',
-                source: 'Original work',
-                language: 'en',
-                relation: 'First novel in Sprawl trilogy',
-                coverage: '2030s; Chiba City; Cyberspace',
-                rights: 'Copyright William Gibson',
-                owner: 'University Library 1',
-                lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'open',
-            },
-            {
-                docType: 'Book',
-                identifier: 'book003',
-                title: 'The Foundation',
-                creator: 'Isaac Asimov',
-                subject: 'Science Fiction; Psychohistory; Galactic Empire',
-                description: 'The first novel in the Foundation series about the fall of a galactic empire and the science of psychohistory.',
-                publisher: 'Gnome Press',
-                contributor: 'Edd Cartier (illustrations)',
-                date: '1951-05-01',
-                type: 'Text; Novel',
-                format: 'Print; Hardcover',
-                source: 'Astounding Science Fiction magazine',
-                language: 'en',
-                relation: 'First in Foundation series',
-                coverage: 'Far future; Galactic Empire',
-                rights: 'Copyright Isaac Asimov Estate',
-                owner: 'University Library 1',
-                lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'open',
-            },
-            {
-                docType: 'Book',
-                identifier: 'book004',
-                title: 'Hyperion',
-                creator: 'Dan Simmons',
-                subject: 'Science Fiction; Space Opera; Time Travel; AI',
-                description: 'A Canterbury Tales-style narrative about pilgrims journeying to the mysterious world of Hyperion.',
-                publisher: 'Doubleday',
-                contributor: 'Gary Ruddell (cover art)',
-                date: '1989-05-26',
-                type: 'Text; Novel',
-                format: 'Print; Hardcover',
-                source: 'Original work',
-                language: 'en',
-                relation: 'First in Hyperion Cantos series',
-                coverage: '28th century; Planet Hyperion',
-                rights: 'Copyright Dan Simmons',
-                owner: 'University Library 1',
-                lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'open',
-            },
-            {
-                docType: 'Book',
-                identifier: 'book005',
-                title: 'The Left Hand of Darkness',
-                creator: 'Ursula K. Le Guin',
-                subject: 'Science Fiction; Gender; Politics; Anthropology',
-                description: 'A groundbreaking exploration of gender and society on a planet where inhabitants can change sex.',
-                publisher: 'Ace Books',
-                contributor: 'Leo and Diane Dillon (cover art)',
-                date: '1969-03-01',
-                type: 'Text; Novel',
-                format: 'Print; Paperback',
-                source: 'Original work',
-                language: 'en',
-                relation: 'Part of Hainish Cycle',
-                coverage: 'Planet Gethen (Winter)',
-                rights: 'Copyright Ursula K. Le Guin Estate',
-                owner: 'University Library 1',
-                lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'open',
-            },
-            {
-                docType: 'Book',
-                identifier: 'book006',
-                title: 'Ender\'s Game',
-                creator: 'Orson Scott Card',
-                subject: 'Science Fiction; Military; Children; Strategy',
-                description: 'A young boy is recruited to attend Battle School and trained to fight against an alien invasion.',
-                publisher: 'Tor Books',
-                contributor: 'John Harris (cover art)',
-                date: '1985-01-15',
-                type: 'Text; Novel',
-                format: 'Print; Hardcover',
-                source: 'Analog Science Fiction magazine (short story)',
-                language: 'en',
-                relation: 'First in Ender Quintet series',
-                coverage: 'Near future; Space; Battle School',
-                rights: 'Copyright Orson Scott Card',
-                owner: 'University Library 1',
-                lendee: 'none',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: now,
+                updatedAt: now,
                 status: 'open',
             },
         ];
@@ -166,6 +62,7 @@ export class AssetTransferContract extends Contract {
             throw new Error(`The asset ${identifier} already exists`);
         }
 
+        const now = this.getLedgerTimestampISO(ctx);
         const asset: Book = {
             docType: 'Book',
             identifier,
@@ -185,8 +82,8 @@ export class AssetTransferContract extends Contract {
             rights: '',
             owner,
             lendee: 'none',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: now,
+            updatedAt: now,
             status: 'open',
         };
         
@@ -219,7 +116,7 @@ export class AssetTransferContract extends Contract {
         asset.publisher = publisher;
         asset.date = date;
         asset.owner = owner;
-        asset.updatedAt = new Date().toISOString();
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
         
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
@@ -235,7 +132,7 @@ export class AssetTransferContract extends Contract {
         
         asset.lendee = lendee;
         asset.status = 'loaned';
-        asset.updatedAt = new Date().toISOString();
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
         
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
@@ -247,7 +144,7 @@ export class AssetTransferContract extends Contract {
         
         asset.lendee = 'none';
         asset.status = 'open';
-        asset.updatedAt = new Date().toISOString();
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
         
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
@@ -274,6 +171,7 @@ export class AssetTransferContract extends Contract {
         const asset = JSON.parse(assetString) as Book;
         const oldOwner = asset.owner;
         asset.owner = newOwner;
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
         return oldOwner;
     }

@@ -39,7 +39,6 @@ function register_org_admins() {
 
   register_org_admin org0 org0admin org0adminpw
   register_org_admin org1 org1admin org1adminpw
-  register_org_admin org2 org2admin org2adminpw
 
   pop_fn
 }
@@ -69,7 +68,6 @@ function enroll_org_admins() {
 
   enroll_org_admin orderer  org0 org0admin org0adminpw
   enroll_org_admin peer     org1 org1admin org1adminpw
-  enroll_org_admin peer     org2 org2admin org2adminpw
 
   pop_fn
 }
@@ -148,7 +146,6 @@ function create_channel_MSP() {
 
   create_channel_org_MSP org0 orderer $ORG0_NS
   create_channel_org_MSP org1 peer $ORG1_NS
-  create_channel_org_MSP org2 peer $ORG2_NS
 
   extract_orderer_cert org0 orderer1
   extract_orderer_cert org0 orderer2
@@ -272,7 +269,6 @@ function join_channel_orderer() {
 
 function join_channel_peers() {
   join_org_peers org1
-  join_org_peers org2
 }
 
 function join_org_peers() {
