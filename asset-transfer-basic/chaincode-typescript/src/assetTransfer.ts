@@ -5,7 +5,7 @@
 import {Context, Contract, Info, Returns, Transaction} from 'fabric-contract-api';
 import stringify from 'json-stringify-deterministic';
 import sortKeysRecursive from 'sort-keys-recursive';
-import {Book} from './asset';
+import {Asset} from './asset';
 
 @Info({title: 'AssetTransfer', description: 'Smart contract for trading Dublin Core assets'})
 export class AssetTransferContract extends Contract {
@@ -20,12 +20,49 @@ export class AssetTransferContract extends Contract {
         return new Date(seconds * 1000 + Math.floor(nanos / 1_000_000)).toISOString();
     }
 
+    // Basic validation helpers
+    private requireNonEmpty(value: unknown, name: string) {
+        if (typeof value !== 'string' || value.trim() === '') {
+            throw new Error(`${name} is required and must be a non-empty string`);
+        }
+    }
+
+    private validateStatus(status: unknown) {
+        if (status !== 'open' && status !== 'loaned' && status !== 'locked') {
+            throw new Error(`Invalid status value: ${status as string}`);
+        }
+    }
+
+    private validateAssetShape(a: Partial<Asset>) {
+        // Required always
+        this.requireNonEmpty(a.docType, 'docType');
+        this.requireNonEmpty(a.identifier, 'identifier');
+
+        // Common Dublin Core fields that should not be empty for library items
+        this.requireNonEmpty(a.title, 'title');
+        this.requireNonEmpty(a.creator, 'creator');
+        this.requireNonEmpty(a.publisher, 'publisher');
+        this.requireNonEmpty(a.type, 'type');
+
+        if (a.language && typeof a.language !== 'string') {
+            throw new Error('language must be a string');
+        }
+
+        if (a.status) {
+            this.validateStatus(a.status);
+        }
+
+        if (a.status === 'loaned' && (!a.lendee || a.lendee === 'none')) {
+            throw new Error('lendee is required when status is loaned');
+        }
+    }
+
     @Transaction()
     public async InitLedger(ctx: Context): Promise<void> {
         const now = this.getLedgerTimestampISO(ctx);
-        const assets: Book[] = [
+        const assets: Asset[] = [
             {
-                docType: 'Book',
+                docType: 'Book', 
                 identifier: 'book001',
                 title: 'Dune',
                 creator: 'Frank Herbert',
@@ -46,52 +83,85 @@ export class AssetTransferContract extends Contract {
                 createdAt: now,
                 updatedAt: now,
                 status: 'open',
+                // file omitted
             },
         ];
 
         for (const asset of assets) {
+            this.validateAssetShape(asset);
             await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
             console.info(`Asset ${asset.identifier} initialized`);
         }
     }
 
     @Transaction()
-    public async CreateAsset(ctx: Context, identifier: string, title: string, creator: string, subject: string, description: string, publisher: string, date: string, owner: string): Promise<void> {
+    public async CreateAsset(
+        ctx: Context,
+        docType: string,
+        identifier: string,
+        title: string,
+        creator: string,
+        contributor: string,
+        publisher: string,
+        subject: string,
+        description: string,
+        type: string,
+        date: string,
+        coverage: string,
+        format: string,
+        source: string,
+        language: string,
+        relation: string,
+        rights: string,
+        owner: string = 'Zachary Rosario',
+        status: string = 'open',
+    ): Promise<void> {
         const exists = await this.AssetExists(ctx, identifier);
         if (exists) {
             throw new Error(`The asset ${identifier} already exists`);
         }
 
+        // Basic param checks
+        this.requireNonEmpty(docType, 'docType');
+        this.requireNonEmpty(identifier, 'identifier');
+        this.requireNonEmpty(title, 'title');
+        this.requireNonEmpty(creator, 'creator');
+        this.requireNonEmpty(publisher, 'publisher');
+        this.requireNonEmpty(type, 'type');
+        this.validateStatus(status);
+
         const now = this.getLedgerTimestampISO(ctx);
-        const asset: Book = {
-            docType: 'Book',
+        const asset: Asset = {
+            docType,
             identifier,
             title,
             creator,
-            contributor: '',
+            contributor,
             publisher,
             subject,
             description,
-            type: 'Text',
+            type,
             date,
-            coverage: '',
-            format: 'Print',
-            source: '',
-            language: 'en',
-            relation: '',
-            rights: '',
+            coverage,
+            format,
+            source,
+            language,
+            relation,
+            rights,
             owner,
             lendee: 'none',
             createdAt: now,
             updatedAt: now,
-            status: 'open',
+            status: status as Asset['status'],
         };
-        
+
+        this.validateAssetShape(asset);
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
     @Transaction(false)
     public async ReadAsset(ctx: Context, identifier: string): Promise<string> {
+        this.requireNonEmpty(identifier, 'identifier');
         const assetJSON = await ctx.stub.getState(identifier);
         if (assetJSON.length === 0) {
             throw new Error(`The asset ${identifier} does not exist`);
@@ -100,57 +170,113 @@ export class AssetTransferContract extends Contract {
     }
 
     @Transaction()
-    public async UpdateAsset(ctx: Context, identifier: string, title: string, creator: string, subject: string, description: string, publisher: string, date: string, owner: string): Promise<void> {
+    public async UpdateAsset(
+        ctx: Context,
+        identifier: string,
+        updates: string
+    ): Promise<void> {
+        this.requireNonEmpty(identifier, 'identifier');
+        this.requireNonEmpty(updates, 'updates');
+
         const exists = await this.AssetExists(ctx, identifier);
         if (!exists) {
             throw new Error(`The asset ${identifier} does not exist`);
         }
 
+        let updateData: Partial<Asset>;
+        try {
+            updateData = JSON.parse(updates);
+        } catch {
+            throw new Error('updates must be a valid JSON string');
+        }
+
         const assetString = await this.ReadAsset(ctx, identifier);
-        const asset = JSON.parse(assetString) as Book;
-        
-        asset.title = title;
-        asset.creator = creator;
-        asset.subject = subject;
-        asset.description = description;
-        asset.publisher = publisher;
-        asset.date = date;
-        asset.owner = owner;
+        const asset = JSON.parse(assetString) as Asset;
+
+        // Apply updates (only known fields)
+        if (updateData.docType !== undefined) this.requireNonEmpty(updateData.docType, 'docType'), asset.docType = updateData.docType;
+        if (updateData.title !== undefined) asset.title = updateData.title;
+        if (updateData.creator !== undefined) asset.creator = updateData.creator;
+        if (updateData.contributor !== undefined) asset.contributor = updateData.contributor;
+        if (updateData.publisher !== undefined) asset.publisher = updateData.publisher;
+        if (updateData.subject !== undefined) asset.subject = updateData.subject;
+        if (updateData.description !== undefined) asset.description = updateData.description;
+        if (updateData.type !== undefined) asset.type = updateData.type;
+        if (updateData.date !== undefined) asset.date = updateData.date;
+        if (updateData.coverage !== undefined) asset.coverage = updateData.coverage;
+        if (updateData.format !== undefined) asset.format = updateData.format;
+        if (updateData.source !== undefined) asset.source = updateData.source;
+        if (updateData.language !== undefined) asset.language = updateData.language;
+        if (updateData.relation !== undefined) asset.relation = updateData.relation;
+        if (updateData.rights !== undefined) asset.rights = updateData.rights;
+        if (updateData.owner !== undefined) asset.owner = updateData.owner;
+
+        if (updateData.status !== undefined) {
+            this.validateStatus(updateData.status);
+            asset.status = updateData.status;
+        }
+
+        if (updateData.lendee !== undefined) {
+            asset.lendee = updateData.lendee;
+        }
+
+        // Additional consistency checks
+        if (asset.status === 'loaned' && (!asset.lendee || asset.lendee === 'none')) {
+            throw new Error('lendee is required when status is loaned');
+        }
+
         asset.updatedAt = this.getLedgerTimestampISO(ctx);
-        
+
+        this.validateAssetShape(asset);
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
     @Transaction()
     public async LendAsset(ctx: Context, identifier: string, lendee: string): Promise<void> {
+        this.requireNonEmpty(identifier, 'identifier');
+        this.requireNonEmpty(lendee, 'lendee');
+
         const assetString = await this.ReadAsset(ctx, identifier);
-        const asset = JSON.parse(assetString) as Book;
-        
+        const asset = JSON.parse(assetString) as Asset;
+
         if (asset.status !== 'open') {
             throw new Error(`Asset ${identifier} is not available for lending`);
         }
-        
+        if (lendee === 'none') {
+            throw new Error('lendee must not be "none" when lending');
+        }
+        if (asset.owner && asset.owner === lendee) {
+            throw new Error('lendee cannot be the owner');
+        }
+
         asset.lendee = lendee;
         asset.status = 'loaned';
         asset.updatedAt = this.getLedgerTimestampISO(ctx);
-        
+
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
     @Transaction()
     public async ReturnAsset(ctx: Context, identifier: string): Promise<void> {
+        this.requireNonEmpty(identifier, 'identifier');
+
         const assetString = await this.ReadAsset(ctx, identifier);
-        const asset = JSON.parse(assetString) as Book;
-        
+        const asset = JSON.parse(assetString) as Asset;
+
+        if (asset.status !== 'loaned') {
+            throw new Error(`Asset ${identifier} is not currently loaned`);
+        }
+
         asset.lendee = 'none';
         asset.status = 'open';
         asset.updatedAt = this.getLedgerTimestampISO(ctx);
-        
+
         await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
     @Transaction()
     public async DeleteAsset(ctx: Context, identifier: string): Promise<void> {
+        this.requireNonEmpty(identifier, 'identifier');
         const exists = await this.AssetExists(ctx, identifier);
         if (!exists) {
             throw new Error(`The asset ${identifier} does not exist`);
@@ -161,37 +287,25 @@ export class AssetTransferContract extends Contract {
     @Transaction(false)
     @Returns('boolean')
     public async AssetExists(ctx: Context, identifier: string): Promise<boolean> {
+        if (!identifier) return false;
         const assetJSON = await ctx.stub.getState(identifier);
         return assetJSON.length > 0;
-    }
-
-    @Transaction()
-    public async TransferAsset(ctx: Context, identifier: string, newOwner: string): Promise<string> {
-        const assetString = await this.ReadAsset(ctx, identifier);
-        const asset = JSON.parse(assetString) as Book;
-        const oldOwner = asset.owner;
-        asset.owner = newOwner;
-        asset.updatedAt = this.getLedgerTimestampISO(ctx);
-        await ctx.stub.putState(identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
-        return oldOwner;
     }
 
     @Transaction(false)
     @Returns('string')
     public async GetAllAssets(ctx: Context): Promise<string> {
-        const allResults = [];
+        const allResults: Asset[] = [];
         const iterator = await ctx.stub.getStateByRange('', '');
         let result = await iterator.next();
         while (!result.done) {
             const strValue = Buffer.from(result.value.value.toString()).toString('utf8');
-            let record;
             try {
-                record = JSON.parse(strValue) as Book;
+                const record = JSON.parse(strValue) as Asset;
+                allResults.push(record);
             } catch (err) {
                 console.log(err);
-                record = strValue;
             }
-            allResults.push(record);
             result = await iterator.next();
         }
         return JSON.stringify(allResults);

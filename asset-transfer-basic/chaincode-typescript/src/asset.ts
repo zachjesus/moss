@@ -9,9 +9,9 @@ import {Object, Property} from 'fabric-contract-api';
  * following archival best practices for digital preservation
  */
 @Object()
-export class Book {
+export class Asset {
     @Property()
-    public readonly docType: string = 'Book';
+    public docType!: string; // required; no default
 
     @Property('DC.Identifier')
     public identifier: string = '';
@@ -63,7 +63,7 @@ export class Book {
     public owner: string = '';
 
     @Property()
-    public lendee: string = 'none'; 
+    public lendee: string = 'none';
 
     // Archival Management Properties
     @Property()

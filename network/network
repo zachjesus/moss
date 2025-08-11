@@ -52,6 +52,7 @@ context TEMP_DIR                      ${PWD}/build
 context CHAINCODE_BUILDER             ccaas                 # see https://github.com/hyperledgendary/fabric-builder-k8s/blob/main/docs/TEST_NETWORK_K8S.md
 context K8S_CHAINCODE_BUILDER_IMAGE   ghcr.io/hyperledger-labs/fabric-builder-k8s/k8s-fabric-peer
 context K8S_CHAINCODE_BUILDER_VERSION 0.15.1 # For Fabric v2.5+, 0.11.0 or later should be specified
+context DEPLOY_LCP                    true                 # Deploy LCP server with the network
 
 context LOG_FILE                      network.log
 context DEBUG_FILE                    network-debug.log
@@ -75,7 +76,7 @@ function print_help() {
   log "Fabric CA Version    \t: ${FABRIC_CA_VERSION}"
   log "Container Registry   \t: ${FABRIC_CONTAINER_REGISTRY}"
   log "Network name       \t\t: ${NETWORK_NAME}"
-  log "Ingress domain     \t\t: ${DOMAIN}"
+  log "Ingress domain     \t\t: ${}"
   log "Channel name       \t\t: ${CHANNEL_NAME}"
   log "Orderer type       \t\t: ${ORDERER_TYPE}"
   log

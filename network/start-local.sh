@@ -1,6 +1,7 @@
 #!/bin/bash
 export TEST_NETWORK_FABRIC_VERSION=3.1.1 
 export TEST_NETWORK_ORDERER_TYPE=bft
+export DEPLOY_LCP=true 
 
 ./network kind
 ./network cluster init

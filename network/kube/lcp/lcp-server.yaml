@@ -1,0 +1,116 @@
+#
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lcp-server-config
+data:
+  lcp.yaml: |
+    public_base_url: "http://lcp.${DOMAIN}"
+    port: 8081
+    dsn: "sqlite3://file::memory:?cache=shared"
+
+    access:
+      username: "login"
+      password: "password"
+
+    license:
+      provider: "http://edrlab.org"
+      profile: "http://readium.org/lcp/basic-profile"
+      hint_link: "https://www.edrlab.org/lcp-help/{license_id}"
+
+    status:
+      renew_default_days: 7
+      renew_max_days: 40
+      renew_link: "http://lcp.${DOMAIN}/renew/{license_id}"
+
+    certificate:
+      cert: "/certs/cert.pem"
+      private_key: "/certs/privkey.pem"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lcp-server
+  template:
+    metadata:
+      labels:
+        app: lcp-server
+    spec:
+      initContainers:
+        - name: generate-certs
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache openssl
+              openssl req -x509 -newkey rsa:4096 -keyout /certs/privkey.pem -out /certs/cert.pem -days 365 -nodes -subj "/CN=lcp.${DOMAIN}"
+              chmod 644 /certs/cert.pem /certs/privkey.pem
+          volumeMounts:
+            - name: certs-volume
+              mountPath: /certs
+      containers:
+        - name: main
+          image: localhost:5000/lcp-server:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LCPSERVER_CONFIG
+              value: "/config/lcp.yaml"
+          ports:
+            - containerPort: 8081
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+            - name: certs-volume
+              mountPath: /certs
+      volumes:
+        - name: config-volume
+          configMap:
+            name: lcp-server-config
+        - name: certs-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lcp-server
+spec:
+  ports:
+    - name: http
+      port: 8081
+      protocol: TCP
+  selector:
+    app: lcp-server
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: 60s
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+  labels:
+    app: lcp-server
+  name: lcp-server
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: lcp.${DOMAIN}
+      http:
+        paths:
+          - backend:
+              service:
+                name: lcp-server
+                port:
+                  name: http
+            path: /
+            pathType: ImplementationSpecific

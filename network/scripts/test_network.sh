@@ -5,6 +5,76 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+
+function build_lcp_server() {
+  push_fn "Building LCP server image"
+  
+  local current_dir=$(pwd)
+  
+  cd "${PWD}/../lcp-server" || return 1
+  
+  if ! docker ps | grep -q "${LOCAL_REGISTRY_NAME}"; then
+    echo "Error: Local registry is not running. Please ensure it's started before building LCP server."
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+  
+  local port="${LOCAL_REGISTRY_PORT:-5000}"
+  local image="localhost:${port}/lcp-server:latest"
+
+  if ! docker build -t "${image}" .; then
+    echo "Error: Failed to build LCP server image"
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+  
+  if ! docker push "${image}"; then
+    echo "Error: Failed to push LCP server image to local registry"
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+  
+  export LCP_SERVER_IMAGE="${image}"
+  
+  cd "${current_dir}" || return 1
+  . "${current_dir}/scripts/kind.sh"  
+  load_lcp_image_to_kind
+  
+  pop_fn
+}
+
+function launch_lcp_server() {
+  push_fn "Launching LCP server"
+
+  export LCP_SERVER_IMAGE=${LCP_SERVER_IMAGE:-localhost:${LOCAL_REGISTRY_PORT:-5000}/lcp-server:latest}
+ 
+  echo "Applying template with image: ${LCP_SERVER_IMAGE}"
+  if ! apply_template kube/lcp/lcp-server.yaml $ORG1_NS; then
+    kubectl -n $ORG1_NS get events --sort-by='.lastTimestamp' | tail -20
+    return 1
+  fi
+
+  echo "Waiting for LCP server rollout..."
+  if ! kubectl -n $ORG1_NS rollout status deploy/lcp-server --timeout=60s; then
+    kubectl -n $ORG1_NS get pods -l app=lcp-server -o wide
+    echo "Pod logs:"
+    POD=$(kubectl -n $ORG1_NS get pods -l app=lcp-server -o name | head -1)
+    if [ -n "$POD" ]; then
+      kubectl -n $ORG1_NS logs $POD --all-containers
+      echo "Pod details:"
+      kubectl -n $ORG1_NS describe $POD
+    fi
+    echo "Deployment details:"
+    kubectl -n $ORG1_NS describe deploy/lcp-server
+    return 1
+  fi
+
+  pop_fn
+}
+
 function launch_orderers() {
   push_fn "Launching orderers"
 
@@ -151,6 +221,11 @@ function network_up() {
 
   launch_orderers
   launch_peers
+
+  if [ "${DEPLOY_LCP}" = "true" ]; then
+    build_lcp_server
+    launch_lcp_server
+  fi
 }
 
 function stop_services() {
