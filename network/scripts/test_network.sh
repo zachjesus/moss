@@ -41,8 +41,44 @@ function build_lcp_server() {
   
   cd "${current_dir}" || return 1
   . "${current_dir}/scripts/kind.sh"  
-  load_lcp_image_to_kind
   
+  pop_fn
+}
+
+function build_asset_encrypter() {
+  push_fn "Building asset-encrypter image"
+
+  local current_dir=$(pwd)
+
+  cd "${PWD}/scripts/asset-encrypter" || return 1
+
+
+  if ! docker ps | grep -q "${LOCAL_REGISTRY_NAME}"; then
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+
+  local port="${LOCAL_REGISTRY_PORT:-5000}"
+  local image="localhost:${port}/asset-encrypter:latest"
+
+  if ! docker build -t "${image}" .; then
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+
+  if ! docker push "${image}"; then
+    cd "${current_dir}" || return 1
+    pop_fn
+    return 1
+  fi
+
+  export ASSET_ENCRYPTER_IMAGE="${image}"
+
+  cd "${current_dir}" || return 1
+  . "${current_dir}/scripts/kind.sh"
+
   pop_fn
 }
 
@@ -224,6 +260,7 @@ function network_up() {
 
   if [ "${DEPLOY_LCP}" = "true" ]; then
     build_lcp_server
+    build_asset_encrypter
     launch_lcp_server
   fi
 }

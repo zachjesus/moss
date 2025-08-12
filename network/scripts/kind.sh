@@ -5,22 +5,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-function load_lcp_image_to_kind() {
-  push_fn "Loading LCP server image to KIND"
-
-  local port="${LOCAL_REGISTRY_PORT:-5000}"
-  local image="localhost:${port}/lcp-server:latest"
-
-  if docker image inspect "${image}" &>/dev/null; then
-    kind load docker-image "${image}"
-  else
-    echo "Warning: LCP server image not found (${image}). Make sure to build it before loading."
-    return 1
-  fi
-
-  pop_fn
-}
-
 function kind_create() {
   push_fn  "Creating cluster \"${CLUSTER_NAME}\""
 
@@ -86,6 +70,11 @@ function kind_load_docker_images() {
 
   kind load docker-image ghcr.io/hyperledger/fabric-rest-sample:latest
   kind load docker-image redis:6.2.5
+
+  if [ "${DEPLOY_LCP}" = "true" ]; then
+    kind load docker-image localhost:5000/lcp-server:latest
+    kind load docker-image localhost:5000/asset-encrypter:latest
+  fi
 
   pop_fn
 }

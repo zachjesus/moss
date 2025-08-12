@@ -41,6 +41,7 @@ function init_storage_volumes() {
 
   cat kube/pvc-fabric-org0.yaml | envsubst | kubectl -n $ORG0_NS create -f - || true
   cat kube/pvc-fabric-org1.yaml | envsubst | kubectl -n $ORG1_NS create -f - || true
+  cat kube/pvc-assets.yaml | envsubst | kubectl -n $ORG1_NS create -f - || true
 
   pop_fn
 }
