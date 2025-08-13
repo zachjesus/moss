@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: asset-encrypter
-  namespace: ${NS}
+  namespace: test-network
   labels:
     app: asset-encrypter
 spec:
@@ -29,8 +29,17 @@ spec:
               value: "/assets"
             - name: ENCRYPTED_DIR
               value: "/assets-encrypted"
+            - name: NS
+              value: "test-network"
             - name: LCP_SERVER_URL
-              value: "http://login:password@lcp-server.${NS}.svc.cluster.local:8081"
+              value: "http://login:password@lcp-server.test-network.svc.cluster.local:8081"
+        - name: encrypted-assets-server
+          image: nginx:alpine
+          ports:
+            - containerPort: 8082
+          volumeMounts:
+            - name: encrypted-assets-volume
+              mountPath: /usr/share/nginx/html
       volumes:
         - name: assets-volume
           persistentVolumeClaim:

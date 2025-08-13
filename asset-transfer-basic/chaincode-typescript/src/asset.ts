@@ -2,79 +2,54 @@
   SPDX-License-Identifier: Apache-2.0
 */
 
-import {Object, Property} from 'fabric-contract-api';
+import { Object, Property } from 'fabric-contract-api';
 
-/**
- * Asset class representing a digital asset with Dublin Core metadata
- * following archival best practices for digital preservation
- */
 @Object()
 export class Asset {
-    @Property()
-    public docType!: string; // required; no default
+  @Property()
+  public docType!: string;
 
-    @Property('DC.Identifier')
-    public identifier: string = '';
+  @Property()
+  public _identifier: string = '';
 
-    @Property('DC.Title')
-    public title: string = '';
+  @Property()
+  public metadata: string = '';
 
-    @Property('DC.Creator')
-    public creator: string = '';
+  @Property()
+  public owner: string = '';
 
-    @Property('DC.Contributor')
-    public contributor: string = '';
+  @Property()
+  public lendee: string = 'none';
 
-    @Property('DC.Publisher')
-    public publisher: string = '';
+  @Property()
+  public createdAt: string = '';
 
-    @Property('DC.Subject')
-    public subject: string = '';
+  @Property()
+  public updatedAt: string = '';
 
-    @Property('DC.Description')
-    public description: string = '';
+  @Property()
+  public status: 'open' | 'loaned' | 'locked' = 'open';
 
-    @Property('DC.Type')
-    public type: string = '';
+  @Property()
+  public licenseEndsAt: string = '';
 
-    @Property('DC.Date')
-    public date: string = '';
+  @Property()
+  public file: string = 'placeholder';
 
-    @Property('DC.Coverage')
-    public coverage: string = '';
+  constructor(identifier: string) {
+    this._identifier = identifier;
+    this.metadata = this.buildMetadataLink(identifier);
+  }
 
-    @Property('DC.Format')
-    public format: string = '';
-
-    @Property('DC.Source')
-    public source: string = '';
-
-    @Property('DC.Language')
-    public language: string = 'en';
-
-    @Property('DC.Relation')
-    public relation: string = '';
-
-    @Property('DC.Rights')
-    public rights: string = '';
-
-    // Asset Management Properties
-    @Property()
-    public owner: string = '';
-
-    @Property()
-    public lendee: string = 'none';
-
-    // Archival Management Properties
-    @Property()
-    public createdAt: string = '';
-
-    @Property()
-    public updatedAt: string = '';
-
-    @Property()
-    public status: 'open' | 'loaned' | 'locked' = 'open';
-
-    @Property()
-    public file?: string = 'placeholder'; // Link to file
+  private buildMetadataLink(identifier: string): string {
+    if (identifier.startsWith('DOI_')) {
+      // For DOI use Crossref API
+      const doi = identifier.replace('DOI_', '').replace(/\//g, '%2F');
+      return `https://api.crossref.org/works/${doi}`;
+    } else {
+      // OpenLibrary API for ISBN, OCLC, LCCN, OLID
+      const [type, value] = identifier.split('_');
+      return `https://openlibrary.org/api/books?bibkeys=${type}:${value}&format=json`;
+    }
+  }
 }
