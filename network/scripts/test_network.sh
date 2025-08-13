@@ -8,40 +8,19 @@
 
 function build_lcp_server() {
   push_fn "Building LCP server image"
-  
+
   local current_dir=$(pwd)
-  
   cd "${PWD}/../lcp-server" || return 1
-  
-  if ! docker ps | grep -q "${LOCAL_REGISTRY_NAME}"; then
-    echo "Error: Local registry is not running. Please ensure it's started before building LCP server."
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
-  
+
   local port="${LOCAL_REGISTRY_PORT:-5000}"
   local image="localhost:${port}/lcp-server:latest"
 
-  if ! docker build -t "${image}" .; then
-    echo "Error: Failed to build LCP server image"
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
-  
-  if ! docker push "${image}"; then
-    echo "Error: Failed to push LCP server image to local registry"
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
-  
+  docker build -t "${image}" . || return 1
+  docker push "${image}" || return 1
+
   export LCP_SERVER_IMAGE="${image}"
-  
   cd "${current_dir}" || return 1
-  . "${current_dir}/scripts/kind.sh"  
-  
+
   pop_fn
 }
 
@@ -49,35 +28,28 @@ function build_asset_encrypter() {
   push_fn "Building asset-encrypter image"
 
   local current_dir=$(pwd)
-
-  cd "${PWD}/scripts/asset-encrypter" || return 1
-
-
-  if ! docker ps | grep -q "${LOCAL_REGISTRY_NAME}"; then
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
+  cd "${PWD}/../asset-encrypter" || return 1
 
   local port="${LOCAL_REGISTRY_PORT:-5000}"
   local image="localhost:${port}/asset-encrypter:latest"
 
-  if ! docker build -t "${image}" .; then
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
-
-  if ! docker push "${image}"; then
-    cd "${current_dir}" || return 1
-    pop_fn
-    return 1
-  fi
+  docker build -t "${image}" . || return 1
+  docker push "${image}" || return 1
 
   export ASSET_ENCRYPTER_IMAGE="${image}"
-
   cd "${current_dir}" || return 1
-  . "${current_dir}/scripts/kind.sh"
+
+  pop_fn
+}
+
+function launch_asset_encrypter() {
+  push_fn "Launching asset-encrypter"
+
+  export ASSET_ENCRYPTER_IMAGE=${ASSET_ENCRYPTER_IMAGE:-localhost:${LOCAL_REGISTRY_PORT:-5000}/asset-encrypter:latest}
+
+  apply_template kube/asset-encrypter.yaml $NS || return 1
+
+  kubectl -n $NS rollout status deploy/asset-encrypter || return 1
 
   pop_fn
 }
@@ -86,27 +58,10 @@ function launch_lcp_server() {
   push_fn "Launching LCP server"
 
   export LCP_SERVER_IMAGE=${LCP_SERVER_IMAGE:-localhost:${LOCAL_REGISTRY_PORT:-5000}/lcp-server:latest}
- 
-  echo "Applying template with image: ${LCP_SERVER_IMAGE}"
-  if ! apply_template kube/lcp/lcp-server.yaml $ORG1_NS; then
-    kubectl -n $ORG1_NS get events --sort-by='.lastTimestamp' | tail -20
-    return 1
-  fi
 
-  echo "Waiting for LCP server rollout..."
-  if ! kubectl -n $ORG1_NS rollout status deploy/lcp-server --timeout=60s; then
-    kubectl -n $ORG1_NS get pods -l app=lcp-server -o wide
-    echo "Pod logs:"
-    POD=$(kubectl -n $ORG1_NS get pods -l app=lcp-server -o name | head -1)
-    if [ -n "$POD" ]; then
-      kubectl -n $ORG1_NS logs $POD --all-containers
-      echo "Pod details:"
-      kubectl -n $ORG1_NS describe $POD
-    fi
-    echo "Deployment details:"
-    kubectl -n $ORG1_NS describe deploy/lcp-server
-    return 1
-  fi
+  apply_template kube/lcp/lcp-server.yaml $NS || return 1
+
+  kubectl -n $NS rollout status deploy/lcp-server || return 1
 
   pop_fn
 }
@@ -259,9 +214,12 @@ function network_up() {
   launch_peers
 
   if [ "${DEPLOY_LCP}" = "true" ]; then
+    cat kube/asset-pvc.yaml | envsubst | kubectl -n $ORG1_NS apply -f -
+
     build_lcp_server
     build_asset_encrypter
     launch_lcp_server
+    launch_asset_encrypter
   fi
 }
 

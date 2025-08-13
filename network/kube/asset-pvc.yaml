@@ -2,6 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: fabric-org1-assets
+  namespace: ${NS}
 spec:
   accessModes:
     - ReadWriteOnce
@@ -13,7 +14,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fabric-org1-encrypted
+  name: fabric-org1-encrypted-assets
+  namespace: ${NS}
 spec:
   accessModes:
     - ReadWriteOnce

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-encrypter
+  namespace: ${NS}
+  labels:
+    app: asset-encrypter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-encrypter
+  template:
+    metadata:
+      labels:
+        app: asset-encrypter
+    spec:
+      containers:
+        - name: asset-encrypter
+          image: localhost:5000/asset-encrypter:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: assets-volume
+              mountPath: /assets
+            - name: encrypted-assets-volume
+              mountPath: /assets-encrypted
+          env:
+            - name: WATCH_DIR
+              value: "/assets"
+            - name: ENCRYPTED_DIR
+              value: "/assets-encrypted"
+            - name: LCP_SERVER_URL
+              value: "http://login:password@lcp-server.${NS}.svc.cluster.local:8081"
+      volumes:
+        - name: assets-volume
+          persistentVolumeClaim:
+            claimName: fabric-org1-assets
+        - name: encrypted-assets-volume
+          persistentVolumeClaim:
+            claimName: fabric-org1-encrypted-assets

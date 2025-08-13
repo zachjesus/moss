@@ -36,17 +36,6 @@ spec:
               mountPath: /fabric/application/gateways            
             - name: tlscerts
               mountPath: /fabric/tlscacerts
-            - name: assets-volume
-              mountPath: /assets
-            - name: encrypted-assets-volume
-              mountPath: /encrypted-assets
-        - name: asset-encrypter
-          image: localhost:5000/asset-encrypter:latest
-          volumeMounts:
-            - name: assets-volume
-              mountPath: /assets
-            - name: encrypted-assets-volume
-              mountPath: /assets-encrypted
       volumes:
         - name: fabric-ccp
           configMap:
@@ -57,9 +46,3 @@ spec:
         - name: tlscerts
           configMap:
             name: app-fabric-tls-v1-map
-        - name: assets-volume
-          persistentVolumeClaim:
-            claimName: fabric-org1-assets
-        - name: encrypted-assets-volume
-          persistentVolumeClaim:
-            claimName: fabric-org1-encrypted
