@@ -7,10 +7,7 @@ import { Object, Property } from 'fabric-contract-api';
 @Object()
 export class Asset {
   @Property()
-  public docType!: string;
-
-  @Property()
-  public _identifier: string = '';
+  public identifier: string = '';
 
   @Property()
   public metadata: string = '';
@@ -37,7 +34,7 @@ export class Asset {
   public file: string = 'placeholder';
 
   constructor(identifier: string) {
-    this._identifier = identifier;
+    this.identifier = identifier;
     this.metadata = this.buildMetadataLink(identifier);
   }
 

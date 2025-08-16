@@ -5,8 +5,16 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"net/http"
+	"os"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/edrlab/lcp-server/pkg/stor"
 	"github.com/go-chi/chi/v5"
@@ -80,6 +88,60 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrServer(err))
 		return
 	}
+
+	go func(pub *stor.Publication) {
+		base := path.Base(pub.Location)
+		identifier := strings.TrimSuffix(base, path.Ext(base))
+		assetPayload := map[string]interface{}{
+			"identifier":    identifier,
+			"owner":         "Zachary Rosario",
+			"status":        "open",
+			"licenseEndsAt": "none", // must be non-empty to pass REST validator
+			"file":          pub.Location,
+		}
+
+		jsonPayload, err := json.Marshal(assetPayload)
+		if err != nil {
+			log.Printf("marshal asset payload error: %v", err)
+			return
+		}
+
+		baseURL := os.Getenv("FABRIC_REST_URL")
+		if baseURL == "" {
+			// cluster DNS with correct port
+			baseURL = "http://fabric-rest-sample.test-network.svc.cluster.local:3000"
+		}
+		url := strings.TrimRight(baseURL, "/") + "/api/assets"
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+		if err != nil {
+			log.Printf("create request error: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if apiKey := os.Getenv("FABRIC_REST_APIKEY"); apiKey != "" {
+			req.Header.Set("X-Api-Key", apiKey)
+		} else {
+			req.Header.Set("X-Api-Key", "97834158-3224-4CE7-95F9-A148C886653E")
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("POST %s error: %v (id=%s)", url, err, identifier)
+			return
+		}
+		defer resp.Body.Close()
+
+		// log response body on non-2xx so we can see validation errors
+		if resp.StatusCode >= 400 {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			log.Printf("POST %s returned status=%d for id=%s body=%s", url, resp.StatusCode, identifier, string(bodyBytes))
+			return
+		}
+
+		log.Printf("POST %s returned status=%d for id=%s", url, resp.StatusCode, identifier)
+	}(publication)
 
 	render.Status(r, http.StatusCreated)
 	if err := render.Render(w, r, NewPublicationResponse(publication)); err != nil {

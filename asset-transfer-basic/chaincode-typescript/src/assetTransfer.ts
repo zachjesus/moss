@@ -37,14 +37,8 @@ export class AssetTransferContract extends Contract {
     }
 
     @Transaction()
-    public async InitLedger(ctx: Context): Promise<void> {
-        return;
-    }
-
-    @Transaction()
     public async CreateAsset(
         ctx: Context,
-        docType: string,
         identifier: string,
         owner: string = 'Zachary Rosario',
         status: string,
@@ -60,13 +54,12 @@ export class AssetTransferContract extends Contract {
             throw new Error(`The asset ${identifier} already exists`);
         }
 
-        this.requireNonEmpty(docType, 'docType');
         this.requireNonEmpty(owner, 'owner');
+        this.requireNonEmpty(file, 'file');
         this.validateStatus(status);
 
         const now = this.getLedgerTimestampISO(ctx);
         const asset = new Asset(identifier);
-        asset.docType = docType;
         asset.owner = owner;
         asset.lendee = 'none';
         asset.createdAt = now;
@@ -75,7 +68,11 @@ export class AssetTransferContract extends Contract {
         asset.licenseEndsAt = licenseEndsAt;
         if (file) asset['file'] = file;
 
-        await ctx.stub.putState(asset._identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
+        {
+            // convert class instance to a plain object before sorting keys
+            const assetPlain = JSON.parse(JSON.stringify(asset));
+            await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(assetPlain))));
+        }
     }
 
     @Transaction(false)
@@ -112,7 +109,6 @@ export class AssetTransferContract extends Contract {
         const assetString = await this.ReadAsset(ctx, identifier);
         const asset = JSON.parse(assetString) as Asset;
 
-        if (updateData.docType !== undefined) this.requireNonEmpty(updateData.docType, 'docType'), asset.docType = updateData.docType;
         if (updateData.owner !== undefined) this.requireNonEmpty(updateData.owner, 'owner'), asset.owner = updateData.owner;
         if (updateData.status !== undefined) this.requireNonEmpty(updateData.status, 'status'), this.validateStatus(updateData.status), asset.status = updateData.status;
         if (updateData.lendee !== undefined) this.requireNonEmpty(updateData.lendee, 'lendee'), asset.lendee = updateData.lendee;
@@ -121,17 +117,61 @@ export class AssetTransferContract extends Contract {
 
         asset.updatedAt = this.getLedgerTimestampISO(ctx);
 
-        await ctx.stub.putState(asset._identifier, Buffer.from(stringify(sortKeysRecursive(asset))));
+        {
+            const assetPlain = JSON.parse(JSON.stringify(asset));
+            await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(assetPlain))));
+        }
     }
 
     @Transaction()
     public async LendAsset(ctx: Context, identifier: string, lendee: string): Promise<void> {
-        return;
+        this.requireNonEmpty(identifier, 'identifier');
+        this.requireNonEmpty(lendee, 'lendee');
+    
+        const assetJSON = await ctx.stub.getState(identifier);
+        if (assetJSON.length === 0) {
+            throw new Error(`The asset ${identifier} does not exist`);
+        }
+    
+        const asset = JSON.parse(assetJSON.toString()) as Asset;
+    
+        if (asset.status !== 'open') {
+            throw new Error(`Asset ${identifier} is not available for lending (current status: ${asset.status})`);
+        }
+    
+        asset.status = 'loaned';
+        asset.lendee = lendee;
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
+    
+        {
+            const assetPlain = JSON.parse(JSON.stringify(asset));
+            await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(assetPlain))));
+        }
     }
 
     @Transaction()
     public async ReturnAsset(ctx: Context, identifier: string): Promise<void> {
-        return;
+        this.requireNonEmpty(identifier, 'identifier');
+    
+        const assetJSON = await ctx.stub.getState(identifier);
+        if (assetJSON.length === 0) {
+            throw new Error(`The asset ${identifier} does not exist`);
+        }
+    
+        const asset = JSON.parse(assetJSON.toString()) as Asset;
+    
+        if (asset.status !== 'loaned') {
+            throw new Error(`Asset ${identifier} is not currently loaned (current status: ${asset.status})`);
+        }
+    
+        asset.status = 'open';
+        asset.lendee = 'none';
+        asset.updatedAt = this.getLedgerTimestampISO(ctx);
+    
+        {
+            const assetPlain = JSON.parse(JSON.stringify(asset));
+            await ctx.stub.putState(asset.identifier, Buffer.from(stringify(sortKeysRecursive(assetPlain))));
+        }
     }
 
     @Transaction()

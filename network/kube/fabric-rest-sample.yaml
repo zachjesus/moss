@@ -103,7 +103,7 @@ spec:
     spec:
       containers:
         - name: main
-          image: ghcr.io/hyperledger/fabric-rest-sample
+          image: localhost:5000/fabric-rest-sample:latest
           imagePullPolicy: IfNotPresent 
           env: 
             - name: LOG_LEVEL

@@ -59,14 +59,28 @@ function rollout_rest_sample() {
 
 function launch_rest_sample() {
   local ns=$ORG1_NS
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local rest_sample_dir="${script_dir}/../../asset-transfer-basic/rest-api-typescript"
+  local image_name="localhost:5000/fabric-rest-sample:latest"
+  local current_dir="$(pwd)"
+
   construct_rest_sample_configmap
 
-  apply_template kube/fabric-rest-sample.yaml $ns
+  log "Building local fabric-rest-sample Docker image..."
+  cd "$rest_sample_dir" || return 1
+  docker build -t $image_name .
+  cd "$current_dir"  
+
+  log "Pushing image to local registry..."
+  docker push $image_name
+
+  log "Applying Kubernetes deployment..."
+  apply_template "${script_dir}/../kube/fabric-rest-sample.yaml" $ns
 
   kubectl -n $ns rollout status deploy/fabric-rest-sample
 
   log ""
-  log "The fabric-rest-sample has started."
+  log "The fabric-rest-sample has started with your local image."
   log "See https://github.com/hyperledger/fabric-samples/tree/main/asset-transfer-basic/rest-api-typescript for additional usage details."
   log "To access the endpoint:"
   log ""

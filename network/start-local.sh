@@ -12,6 +12,6 @@ export DEPLOY_LCP=true
 
 ./network chaincode deploy asset-transfer-basic ../asset-transfer-basic/chaincode-typescript
 
-./network chaincode invoke asset-transfer-basic '{"Args":["InitLedger"]}'
+# ./network chaincode invoke asset-transfer-basic '{"Args":["InitLedger"]}'
 
 #./network chaincode query  asset-transfer-basic '{"Args":["ReadAsset","book001"]}'

@@ -16,6 +16,7 @@ while read filename; do
       -filename "${asset_name}_${identifier}.lcp.${ext}" \
       -lcpsv "$LCP_SERVER_URL" \
       -v2 \
+      -cover\
       -verbose
 
     echo "Encrypted $filename to $ENCRYPTED_DIR/${asset_name}_${identifier}.lcp.${ext} and notified LCP server"
