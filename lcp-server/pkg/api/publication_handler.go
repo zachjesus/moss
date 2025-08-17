@@ -94,10 +94,9 @@ func (a *APICtrl) CreatePublication(w http.ResponseWriter, r *http.Request) {
 		identifier := strings.TrimSuffix(base, path.Ext(base))
 		assetPayload := map[string]interface{}{
 			"identifier":    identifier,
-			"owner":         "Zachary Rosario",
 			"status":        "open",
-			"licenseEndsAt": "none", // must be non-empty to pass REST validator
-			"file":          pub.Location,
+			"file-location":          pub.Location,
+			"content-type":   pub.ContentType,
 		}
 
 		jsonPayload, err := json.Marshal(assetPayload)

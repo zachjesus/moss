@@ -27,6 +27,13 @@ import { AssetNotFoundError } from './errors';
 import { evatuateTransaction } from './fabric';
 import { addSubmitTransactionJob } from './jobs';
 import { logger } from './logger';
+import {
+    getAcceptedStatuses,
+    isAcceptedStatus,
+    getIdentifierType,
+    isAcceptedFileExtension,
+    DEFAULT_OWNER,
+} from './utils';
 
 const { ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } =
     StatusCodes;
@@ -59,14 +66,13 @@ assetsRouter.post(
     '/',
     body().isObject().withMessage('body must contain an asset object'),
     body('identifier', 'must be a string').notEmpty(),
-    body('owner', 'must be a string').notEmpty(),
-    body('status', "must be 'open', 'loaned', or 'locked'").isIn([
-        'open',
-        'loaned',
-        'locked',
-    ]),
-    body('licenseEndsAt', 'must be a string').notEmpty(),
-    body('file', 'must be a string').notEmpty(),
+    body('owner').optional().isString(),
+    body('status', `must be one of: ${getAcceptedStatuses().join(',')}`).isIn(
+        getAcceptedStatuses()
+    ),
+
+    body('file-location', 'file-location must be a string').notEmpty(),
+    body('content-type', 'content_type must be a string').notEmpty(),
     async (req: Request, res: Response) => {
         logger.debug(req.body, 'Create asset request received');
 
@@ -82,7 +88,55 @@ assetsRouter.post(
         }
 
         const mspId = req.user as string;
-        const { identifier, owner, status, licenseEndsAt, file } = req.body;
+        const { identifier, owner, status } = req.body;
+
+        const safeOwner = owner == null ? DEFAULT_OWNER : String(owner);
+
+        const fileLocation = req.body['file-location'];
+        const contentType = req.body['content-type'];
+
+        if (typeof identifier !== 'string' || identifier.trim() === '') {
+            return res.status(BAD_REQUEST).json({
+                status: getReasonPhrase(BAD_REQUEST),
+                reason: 'INVALID_IDENTIFIER',
+                message:
+                    'identifier is required and must be a non-empty string',
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        if (getIdentifierType(identifier) === null) {
+            return res.status(BAD_REQUEST).json({
+                status: getReasonPhrase(BAD_REQUEST),
+                reason: 'UNSUPPORTED_IDENTIFIER',
+                message:
+                    'identifier must be a supported type (e.g. ISBN_<value>, DOI_<value>)',
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        if (typeof status !== 'string' || !isAcceptedStatus(status)) {
+            return res.status(BAD_REQUEST).json({
+                status: getReasonPhrase(BAD_REQUEST),
+                reason: 'INVALID_STATUS',
+                message: `status must be one of: ${getAcceptedStatuses().join(
+                    ','
+                )}`,
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        if (
+            typeof contentType !== 'string' ||
+            !isAcceptedFileExtension(contentType)
+        ) {
+            return res.status(BAD_REQUEST).json({
+                status: getReasonPhrase(BAD_REQUEST),
+                reason: 'INVALID_FILE_TYPE',
+                message: 'content-type (or file extension) is not accepted',
+                timestamp: new Date().toISOString(),
+            });
+        }
 
         try {
             const submitQueue = req.app.locals.jobq as Queue;
@@ -91,10 +145,10 @@ assetsRouter.post(
                 mspId,
                 'CreateAsset',
                 identifier,
-                owner,
+                safeOwner,
                 status,
-                licenseEndsAt,
-                file
+                fileLocation,
+                contentType
             );
 
             return res.status(ACCEPTED).json({
@@ -226,7 +280,6 @@ assetsRouter.put(
 
         try {
             const submitQueue = req.app.locals.jobq as Queue;
-            // Pass updates as a JSON string
             const jobId = await addSubmitTransactionJob(
                 submitQueue,
                 mspId,
@@ -285,7 +338,6 @@ assetsRouter.patch(
 
         try {
             const submitQueue = req.app.locals.jobq as Queue;
-            // Only update owner field
             const jobId = await addSubmitTransactionJob(
                 submitQueue,
                 mspId,
