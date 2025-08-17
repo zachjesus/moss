@@ -20,6 +20,8 @@ _kubectl cp {epub or pdf} test-network/{asset-encrypter-id-from-get-pods}:/asset
                                                                                            Plus it will then send a post to the fabric rest api to add the book to the ledger.
                                                                                            Metadata is automatically handled by your pre-config
 
+_sudo ./network chaincode query asset-transfer-basic '{"Args":["GetAllAssets"]}'_
+
 _curl -s --header "X-Api-Key:${SAMPLE_APIKEY}" http://fabric-rest-sample.localho.st/api/assets_ <--- You should see your uploaded book in the ledger (but it may take a sec)
 
 # To Do
