@@ -16,6 +16,7 @@ _./network rest-easy_
 _kubectl get pods -n test-network_
 
 File names must follow the format ISBN_# , OCLC_# , LCCN_# , OLID_# by default. Format is set in the two util.ts files (which must match) 
+
 _kubectl cp {epub or pdf} test-network/{asset-encrypter-id-from-get-pods}:/assets/_    <---- This will automatically encrypt the uploaded epub or pdf and send it to the LCP server
                                                                                            Plus it will then send a post to the fabric rest api to add the book to the ledger.
                                                                                            Metadata is automatically handled by your pre-config
